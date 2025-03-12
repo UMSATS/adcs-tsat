@@ -26,6 +26,7 @@ https://media.digikey.com/pdf/Data%20Sheets/MEMSIC%20PDFs/MMC5983MA_RevA_4-3-19.
 #define MAG_TEMP_H 0x07
 #define MAG_STATUS 0x08
 #define MAG_CONTROL_0 0x09
+#define MAG_PRODUCT_ID 0x2F
 
 // Function to write to MAGNETOMETER register
 void MAG_WriteReg(uint8_t reg, uint8_t data);
@@ -40,5 +41,11 @@ void MAG_ReadMagneticField(int16_t *pData);
 
 // Function to initialize MAGNETOMETER
 void MAG_Init(void);
+
+//Function to get the ProductID
+void MAG_ProductID(void);
+
+//Function to convert the measuerements to Teslas
+void MAG_ConvertToTeslas(const int16_t *rawData, float *teslaData);
 
 #endif

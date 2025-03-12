@@ -119,6 +119,75 @@ int main(void)
 
   MAG_Init();
 
+  //MAG_ProductID();
+  printf("Hello");
+
+  float exponentialFilter (float curr, float prev, float alpha){
+	  return alpha*curr + (1.0f - alpha) * prev;
+  }
+
+  int16_t gyroData[3] = {0};
+  float gyroDPS[3] = {0,0};
+
+  int16_t magData[3] = {0};
+  float magTesla[3] = {0.0};
+
+  float magTeslaX = 0.0f;
+  float magTeslaY = 0.0f;
+  float magTeslaZ = 0.0f;
+
+  float prevX = 0.0f;
+  float prevY = 0.0f;
+  float prevZ = 0.0f;
+
+  MAG_ReadMagneticField(magData);
+  MAG_ConvertToTeslas(magData, magTesla);
+
+  prevX = magTesla[0];
+  prevY = magTesla[1];
+  prevZ = magTesla[2];
+
+  magTeslaX = prevX;
+  magTeslaY = prevY;
+  magTeslaZ = prevZ;
+
+  float alpha = 0.2f;
+
+  bool readingMag = true;
+  bool readingGyro = false;
+
+
+	  while(readingMag == 1){
+
+	  MAG_ReadMagneticField(magData);
+ 	  MAG_ConvertToTeslas(magData, magTesla);
+
+	  float prevX = magTesla[0];
+	  float prevY = magTesla[1];
+	  float prevZ = magTesla[2];
+
+	  magTeslaX = exponentialFilter(prevX,magTeslaX,alpha);
+	  magTeslaY = exponentialFilter(prevY,magTeslaY,alpha);
+	  magTeslaZ = exponentialFilter(prevZ,magTeslaZ,alpha);
+
+	  /*
+	   * printf("Magnetometer X: " + magTeslaX);
+	   * printf("Magnetometer Y: " + magTeslaY);
+	   * printf("Magnetometer Z: " + magTeslaZ);
+	   *
+	   */
+
+	  HAL_Delay(1000);
+
+	  }
+
+	  while (readingGyro == 1){
+		  GYRO_ReadAngRate(gyroData);
+		  GYRO_ConvertToDPS(gyroData, gyroDPS);
+	  }
+
+
+
   Magnetorquers_Init();
 
   HAL_StatusTypeDef can_operation_status;
@@ -551,6 +620,21 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan1)
         //TODO: Implement error handling for CAN message receives
     }
 }
+
+
+int _write(int file, char *ptr, int len)
+{
+  (void)file;
+  int DataIdx;
+
+  for (DataIdx = 0; DataIdx < len; DataIdx++)
+  {
+    ITM_SendChar(*ptr++);
+  }
+  return len;
+}
+
+
 /* USER CODE END 4 */
 
 /**
