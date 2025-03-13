@@ -120,7 +120,7 @@ int main(void)
   MAG_Init();
 
   //MAG_ProductID();
-  printf("Hello");
+  printf("Hello\n");
 
   float exponentialFilter (float curr, float prev, float alpha){
 	  return alpha*curr + (1.0f - alpha) * prev;
@@ -156,6 +156,8 @@ int main(void)
   bool readingMag = true;
   bool readingGyro = false;
 
+  int count = 0 ;
+
 
 	  while(readingMag == 1){
 
@@ -170,20 +172,22 @@ int main(void)
 	  magTeslaY = exponentialFilter(prevY,magTeslaY,alpha);
 	  magTeslaZ = exponentialFilter(prevZ,magTeslaZ,alpha);
 
-	  /*
-	   * printf("Magnetometer X: " + magTeslaX);
-	   * printf("Magnetometer Y: " + magTeslaY);
-	   * printf("Magnetometer Z: " + magTeslaZ);
-	   *
-	   */
+
+	   printf("Magnetometer X: %.9f\n", magTeslaX);
+	   printf("Magnetometer Y: %.9f\n", magTeslaY);
+	   printf("Magnetometer Z: %.9f\n", magTeslaZ);
+
+	   count++;
+	   printf("Count: %d\n", count);
+
 
 	  HAL_Delay(1000);
 
 	  }
 
 	  while (readingGyro == 1){
-		  GYRO_ReadAngRate(gyroData);
-		  GYRO_ConvertToDPS(gyroData, gyroDPS);
+		  //GYRO_ReadAngRate(gyroData);
+		  //GYRO_ConvertToDPS(gyroData, gyroDPS);
 	  }
 
 

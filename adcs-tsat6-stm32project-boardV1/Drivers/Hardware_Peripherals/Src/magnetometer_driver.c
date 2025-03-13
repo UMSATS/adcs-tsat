@@ -58,7 +58,7 @@ void MAG_Init(void) {
   HAL_GPIO_WritePin(MAG1_nCS_GPIO_Port, MAG1_nCS_Pin, GPIO_PIN_SET);
   HAL_GPIO_WritePin(MAG2_nCS_GPIO_Port, MAG2_nCS_Pin, GPIO_PIN_SET);
   // Configure magnetic sensor settings
-  MAG_WriteReg(MAG_CONTROL_0, 0x00); // Reset sensor
+  MAG_WriteReg(MAG_CONTROL_0, 0x01); // Reset sensor
   HAL_Delay(1); // Wait for reset to complete
 }
 
@@ -71,7 +71,7 @@ void MAG_ProductID(void){
 //Function to convert the Gauss Counts to Teslas
 static float MAG_CountsToTesla(int16_t counts) {
     // Sensitivity: 4096 counts per Gauss; 1 Tesla = 10,000 Gauss.
-    return ((float)counts) / (4096.0f * 10000.0f);
+    return ((float)counts) / (4096.0f * 10000.0f)*1000;
 }
 
 // Converts raw magnetic field data to Teslas
