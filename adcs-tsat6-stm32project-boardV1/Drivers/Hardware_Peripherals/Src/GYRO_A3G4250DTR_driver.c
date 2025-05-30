@@ -1,16 +1,12 @@
 /*
- * GYRO_A3G4250DTR_driver.c
+ *  GYRO_A3G4250DTR_driver.c
  *
  *  Created on: Jan 19, 2024
- *      Author: Alexandr Yermakov, Andrii Kvasnytsia
+ *  Author: Alexandr Yermakov, Andrii Kvasnytsia
+ * 
+ *  Datasheet URL:
+ *  https://www.st.com/resource/en/datasheet/a3g4250d.pdf
  */
-
-/*
-
-Datasheet URL:
-https://www.st.com/resource/en/datasheet/a3g4250d.pdf
-
-*/
 
 #include "GYRO_A3G4250DTR_driver.h"
 #include "stm32l4xx_hal.h"
@@ -45,17 +41,6 @@ void GYRO_ReadAngRate(int16_t *pData){
 
 	uint8_t cmd = 0xC0 | (GYRO_OUT_X_L & 0x3F);  // Set read bit (bit7) and auto-increment bit (bit6)
 	uint8_t buffer[6] = {0};
-
-//	tmpbuffer[0] = GYRO_ReadReg(GYRO_OUT_X_L);
-//	tmpbuffer[1] = GYRO_ReadReg(GYRO_OUT_X_H);
-//	tmpbuffer[2] = GYRO_ReadReg(GYRO_OUT_Y_L);
-//	tmpbuffer[3] = GYRO_ReadReg(GYRO_OUT_Y_H);
-//	tmpbuffer[4] = GYRO_ReadReg(GYRO_OUT_Z_L);
-//	tmpbuffer[5] = GYRO_ReadReg(GYRO_OUT_Z_H);
-//
-//	pData[0] = (int16_t)(tmpbuffer[1] << 8 | tmpbuffer[0]);
-//	pData[1] = (int16_t)(tmpbuffer[3] << 8 | tmpbuffer[2]);
-//	pData[2] = (int16_t)(tmpbuffer[5] << 8 | tmpbuffer[4]);
 
 	HAL_GPIO_WritePin(GYR2_nCS_GPIO_Port, GYR2_nCS_Pin, GPIO_PIN_RESET);
 

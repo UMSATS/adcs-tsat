@@ -31,6 +31,8 @@
 #include "Magnetorquers_driver.h"
 #include "GYRO_A3G4250DTR_driver.h"
 #include "magnetometer_driver.h"
+#include "attitude_control.h"
+#include "b_dot.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -123,80 +125,80 @@ int main(void)
 
   MAG_Init();
 
-  //MAG_ProductID();
-  printf("Hello\n");
+  // //MAG_ProductID();
+  // printf("Hello\n");
 
-  float exponentialFilter (float curr, float prev, float alpha){
-	  return alpha*curr + (1.0f - alpha) * prev;
-  }
+  // float exponentialFilter (float curr, float prev, float alpha){
+	//   return alpha*curr + (1.0f - alpha) * prev;
+  // }
 
-  int16_t gyroData[3] = {0};
-  float gyroDPS[3] = {0,0};
+  // int16_t gyroData[3] = {0};
+  // float gyroDPS[3] = {0,0};
 
-  int16_t magData[3] = {0};
-  float magTesla[3] = {0.0};
+  // int16_t magData[3] = {0};
+  // float magTesla[3] = {0.0};
 
-  float magTeslaX = 0.0f;
-  float magTeslaY = 0.0f;
-  float magTeslaZ = 0.0f;
+  // float magTeslaX = 0.0f;
+  // float magTeslaY = 0.0f;
+  // float magTeslaZ = 0.0f;
 
-  float prevX = 0.0f;
-  float prevY = 0.0f;
-  float prevZ = 0.0f;
+  // float prevX = 0.0f;
+  // float prevY = 0.0f;
+  // float prevZ = 0.0f;
 
-  MAG_ReadMagneticField(magData);
-  MAG_ConvertToTeslas(magData, magTesla);
+  // MAG_ReadMagneticField(magData);
+  // MAG_ConvertToTeslas(magData, magTesla);
 
-  prevX = magTesla[0];
-  prevY = magTesla[1];
-  prevZ = magTesla[2];
+  // prevX = magTesla[0];
+  // prevY = magTesla[1];
+  // prevZ = magTesla[2];
 
-  magTeslaX = prevX;
-  magTeslaY = prevY;
-  magTeslaZ = prevZ;
+  // magTeslaX = prevX;
+  // magTeslaY = prevY;
+  // magTeslaZ = prevZ;
 
-  float alpha = 0.2f;
+  // float alpha = 0.2f;
 
-  bool readingMag = true;
-  bool readingGyro = false;
+  // bool readingMag = true;
+  // bool readingGyro = false;
 
-  int count = 0 ;
-
-
-	  while(readingMag == 1){
-
-	  MAG_ReadMagneticField(magData);
- 	  MAG_ConvertToTeslas(magData, magTesla);
-
-	  float prevX = magTesla[0];
-	  float prevY = magTesla[1];
-	  float prevZ = magTesla[2];
-
-	  magTeslaX = exponentialFilter(prevX,magTeslaX,alpha);
-	  magTeslaY = exponentialFilter(prevY,magTeslaY,alpha);
-	  magTeslaZ = exponentialFilter(prevZ,magTeslaZ,alpha);
+  // int count = 0 ;
 
 
-	   printf("Magnetometer X: %.9f\n", magTeslaX);
-	   printf("Magnetometer Y: %.9f\n", magTeslaY);
-	   printf("Magnetometer Z: %.9f\n", magTeslaZ);
+  // while(readingMag == 1){
+  //   MAG_ReadMagneticField(magData);
+  //   MAG_ConvertToTeslas(magData, magTesla);
 
-	   count++;
-	   printf("Count: %d\n", count);
+  //   float prevX = magTesla[0];
+  //   float prevY = magTesla[1];
+  //   float prevZ = magTesla[2];
+
+  //   magTeslaX = exponentialFilter(prevX,magTeslaX,alpha);
+  //   magTeslaY = exponentialFilter(prevY,magTeslaY,alpha);
+  //   magTeslaZ = exponentialFilter(prevZ,magTeslaZ,alpha);
 
 
-	  HAL_Delay(1000);
+  //   printf("Magnetometer X: %.9f\n", magTeslaX);
+  //   printf("Magnetometer Y: %.9f\n", magTeslaY);
+  //   printf("Magnetometer Z: %.9f\n", magTeslaZ);
 
-	  }
+  //   count++;
+  //   printf("Count: %d\n", count);
 
-	  while (readingGyro == 1){
-		  //GYRO_ReadAngRate(gyroData);
-		  //GYRO_ConvertToDPS(gyroData, gyroDPS);
-	  }
+
+  //   HAL_Delay(1000);
+  // }
+
+  // while (readingGyro == 1){
+  //   //GYRO_ReadAngRate(gyroData);
+  //   //GYRO_ConvertToDPS(gyroData, gyroDPS);
+  // }
 
 
 
   Magnetorquers_Init();
+  AttitudeControl_Init();
+
 
   HAL_StatusTypeDef can_operation_status;
   can_operation_status = CAN_Init();

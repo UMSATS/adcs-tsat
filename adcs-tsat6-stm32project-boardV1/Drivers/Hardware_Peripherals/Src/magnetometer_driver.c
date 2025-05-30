@@ -1,3 +1,14 @@
+/*
+ * 	magnetometer_driver.c
+ *
+ *  Created on: Jan 19, 2024
+ *  
+ * 	Author: Alexandr Yermakov, Andrii Kvasnytsia
+ * 	
+ * 	Datasheet URL:
+ *	https://mm.digikey.com/Volume0/opasdata/d220001/medias/docus/333/MMC5983MA_RevA_4-3-19.pdf
+ */
+
 #include <magnetometer_driver.h>
 #include "stm32l4xx_hal.h"
 #include <stdio.h>
@@ -39,27 +50,23 @@ void MAG_ReadMagneticField(int16_t *pData) {
 	tmpbuffer[4] = MAG_ReadReg(MAG_ZOUT_L);
 	tmpbuffer[5] = MAG_ReadReg(MAG_ZOUT_H);
 
-//	pData[0] = (int16_t)((tmpbuffer[1] << 8) | tmpbuffer[0]);
-//	pData[1] = (int16_t)((tmpbuffer[3] << 8) | tmpbuffer[2]);
-//	pData[2] = (int16_t)((tmpbuffer[5] << 8) | tmpbuffer[4]);
+	uint16_t rawX = ((uint16_t)tmpbuffer[1] << 8) | tmpbuffer[0];
+	uint16_t rawY = ((uint16_t)tmpbuffer[3] << 8) | tmpbuffer[2];
+	uint16_t rawZ = ((uint16_t)tmpbuffer[5] << 8) | tmpbuffer[4];
 
-	 uint16_t rawX = ((uint16_t)tmpbuffer[1] << 8) | tmpbuffer[0];
-	 uint16_t rawY = ((uint16_t)tmpbuffer[3] << 8) | tmpbuffer[2];
-	 uint16_t rawZ = ((uint16_t)tmpbuffer[5] << 8) | tmpbuffer[4];
-
-	 pData[0] = (int16_t)(rawX - 32768);
-	 pData[1] = (int16_t)(rawY - 32768);
-	 pData[2] = (int16_t)(rawZ - 32768);
+	pData[0] = (int16_t)(rawX - 32768);
+	pData[1] = (int16_t)(rawY - 32768);
+	pData[2] = (int16_t)(rawZ - 32768);
 }
 
 // Function to initialize MAGNETOMETER
 void MAG_Init(void) {
-  // Set CS pin high
-  HAL_GPIO_WritePin(MAG1_nCS_GPIO_Port, MAG1_nCS_Pin, GPIO_PIN_SET);
-  HAL_GPIO_WritePin(MAG2_nCS_GPIO_Port, MAG2_nCS_Pin, GPIO_PIN_SET);
-  // Configure magnetic sensor settings
-  MAG_WriteReg(MAG_CONTROL_0, 0x01); // Reset sensor
-  HAL_Delay(1); // Wait for reset to complete
+	// Set CS pin high
+	HAL_GPIO_WritePin(MAG1_nCS_GPIO_Port, MAG1_nCS_Pin, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(MAG2_nCS_GPIO_Port, MAG2_nCS_Pin, GPIO_PIN_SET);
+	// Configure magnetic sensor settings
+	MAG_WriteReg(MAG_CONTROL_0, 0x01); // Reset sensor
+	HAL_Delay(1); // Wait for reset to complete
 }
 
 //Function to get the Product ID from the Magnetometer to check if a connection has been established. Expected Return: 0b48
