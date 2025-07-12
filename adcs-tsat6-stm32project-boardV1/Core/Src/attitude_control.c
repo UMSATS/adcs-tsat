@@ -13,6 +13,10 @@
 #include "magnetometer_driver.h"
 #include "Magnetorquers_driver.h"
 #include "b_dot.h"
+#include "can_message_queue.h"   /* CAN queue structures / functions */
+#include "can.h"                  /* CAN command definitions           */
+
+extern CANQueue_t can_queue;        /* Global queue defined in main.c   */
 
 #define M_THRESHOLD 0.01f  // Or tune as needed
 
@@ -57,6 +61,7 @@ static Sample_t  s_last_sample    = {0};
 static void state_s1_sample(void);
 static void state_s2_actuate(void);
 static void state_s3_decay(void);
+static inline void enqueue_torquer_cmd(uint8_t cmd);
 
 /* ------------------------------------------------------------------------- */
 /*                              public API                                   */
@@ -160,52 +165,52 @@ static void state_s2_actuate(void)
     if (!ADCS_Bdot_Compute(m))
         return;
 
-    // Axis 1
+    /* --------------------------------------------------  Axis 1  -------- */
     if (m[0] > M_THRESHOLD)
     {
-        Magnetorquer1_Forward();
-        Magnetorquer1_Full_Strength();
+        enqueue_torquer_cmd(0xB7); /* Forward dir  */
+        enqueue_torquer_cmd(0xB1); /* Full power   */
     }
     else if (m[0] < -M_THRESHOLD)
     {
-        Magnetorquer1_Reverse();
-        Magnetorquer1_Full_Strength();
+        enqueue_torquer_cmd(0xBA); /* Reverse dir  */
+        enqueue_torquer_cmd(0xB1); /* Full power   */
     }
     else
     {
-        Magnetorquer1_Off();
+        enqueue_torquer_cmd(0xB4); /* Off          */
     }
 
-    // Axis 2
+    /* --------------------------------------------------  Axis 2  -------- */
     if (m[1] > M_THRESHOLD)
     {
-        Magnetorquer2_Forward();
-        Magnetorquer2_Full_Strength();
+        enqueue_torquer_cmd(0xB8);
+        enqueue_torquer_cmd(0xB2);
     }
     else if (m[1] < -M_THRESHOLD)
     {
-        Magnetorquer2_Reverse();
-        Magnetorquer2_Full_Strength();
+        enqueue_torquer_cmd(0xBB);
+        enqueue_torquer_cmd(0xB2);
     }
     else
     {
-        Magnetorquer2_Off();
+        enqueue_torquer_cmd(0xB5);
     }
 
-    // Axis 3
+    /* --------------------------------------------------  Axis 3  -------- */
     if (m[2] > M_THRESHOLD)
     {
-        Magnetorquer3_Forward();
-        Magnetorquer3_Full_Strength();
+        enqueue_torquer_cmd(0xB9);
+        enqueue_torquer_cmd(0xB3);
     }
     else if (m[2] < -M_THRESHOLD)
     {
-        Magnetorquer3_Reverse();
-        Magnetorquer3_Full_Strength();
+        enqueue_torquer_cmd(0xBC);
+        enqueue_torquer_cmd(0xB3);
     }
     else
     {
-        Magnetorquer3_Off();
+        enqueue_torquer_cmd(0xB6);
     }
 }
 /* ---------- S3: decay – torquers already OFF ----------------------------- */
@@ -215,4 +220,12 @@ static void state_s3_decay(void)
     Magnetorquer1_Off();
     Magnetorquer2_Off();
     Magnetorquer3_Off();
+}
+
+/* Simple helper to push a one-byte command into the CAN queue */
+static inline void enqueue_torquer_cmd(uint8_t cmd)
+{
+    CANMessage_t msg = {0};
+    msg.command = cmd;
+    CAN_Queue_Enqueue(&can_queue, &msg);
 }

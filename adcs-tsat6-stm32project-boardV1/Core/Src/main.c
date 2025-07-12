@@ -211,6 +211,9 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+      /* Run closed-loop attitude control scheduler */
+      AttitudeControl_Task();
+
       MAX6822_WDI_Toggle();
 
       if(!CAN_Queue_IsEmpty(&can_queue))
