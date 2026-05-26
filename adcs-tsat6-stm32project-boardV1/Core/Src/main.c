@@ -27,7 +27,8 @@
 
 #include "LEDs_driver.h"
 #include "MAX6822_driver.h"
-#include "can.h"
+#include "tuk/tuk.h"
+#include "can.h" // TODO: remove old CAN implementation
 #include "can_message_queue.h"
 #include "Magnetorquers_driver.h"
 #include "GYRO_A3G4250DTR_driver.h"
@@ -67,7 +68,6 @@ const osThreadAttr_t defaultTask_attributes = {
 };
 /* USER CODE BEGIN PV */
 CANQueue_t can_queue;
-
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -81,7 +81,8 @@ static void MX_TIM16_Init(void);
 void StartDefaultTask(void *argument);
 
 /* USER CODE BEGIN PFP */
-
+static void on_message_received(const CAN_HandleTypeDef *hcan, const CANMessage *msg);
+static void on_error_occurred(const CANWrapper_ErrorInfo *error);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -240,6 +241,13 @@ int main(void)
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
+  const CANWrapper_InitTypeDef cw_init = {
+  		.node_id = NODE_ADCS,    // your subsystem's unique ID in the CAN network.
+  		.message_callback = &on_message_received, // called when a message is received and ready to be handled.
+  		.error_callback = &on_error_occurred      // called when a communication error occurs.
+  };
+  CANWrapper_CAN_Start(&hcan1);
+  CANWrapper_Init(&cw_init);
   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_EVENTS */
@@ -723,6 +731,15 @@ int _write(int file, char *ptr, int len)
   return len;
 }
 
+void on_message_received(const CAN_HandleTypeDef *hcan, const CANMessage *msg)
+{
+	// TODO: Add CAN message reception here
+}
+
+void on_error_occurred(const CANWrapper_ErrorInfo *error)
+{
+	// TODO: Add CAN error handling here
+}
 
 /* USER CODE END 4 */
 
