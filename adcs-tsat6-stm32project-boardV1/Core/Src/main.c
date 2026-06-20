@@ -169,45 +169,40 @@ int main(void)
   int count = 0 ;
 
 
-	  while(readingMag == 1){
+//	  while(readingMag == 1){
+//
+//	  MAG_ReadMagneticField(magData);
+// 	  MAG_ConvertToTeslas(magData, magTesla);
+//
+//	  float prevX = magTesla[0];
+//	  float prevY = magTesla[1];
+//	  float prevZ = magTesla[2];
+//
+//	  magTeslaX = exponentialFilter(prevX,magTeslaX,alpha);
+//	  magTeslaY = exponentialFilter(prevY,magTeslaY,alpha);
+//	  magTeslaZ = exponentialFilter(prevZ,magTeslaZ,alpha);
+//
+//
+//	   printf("Magnetometer X: %.9f\n", magTeslaX);
+//	   printf("Magnetometer Y: %.9f\n", magTeslaY);
+//	   printf("Magnetometer Z: %.9f\n", magTeslaZ);
+//
+//	   count++;
+//	   printf("Count: %d\n", count);
+//
+//
+//	  HAL_Delay(1000);
+//
+//	  }
 
-	  MAG_ReadMagneticField(magData);
- 	  MAG_ConvertToTeslas(magData, magTesla);
-
-	  float prevX = magTesla[0];
-	  float prevY = magTesla[1];
-	  float prevZ = magTesla[2];
-
-	  magTeslaX = exponentialFilter(prevX,magTeslaX,alpha);
-	  magTeslaY = exponentialFilter(prevY,magTeslaY,alpha);
-	  magTeslaZ = exponentialFilter(prevZ,magTeslaZ,alpha);
-
-
-	   printf("Magnetometer X: %.9f\n", magTeslaX);
-	   printf("Magnetometer Y: %.9f\n", magTeslaY);
-	   printf("Magnetometer Z: %.9f\n", magTeslaZ);
-
-	   count++;
-	   printf("Count: %d\n", count);
-
-
-	  HAL_Delay(1000);
-
-	  }
-
-	  while (readingGyro == 1){
-		  //GYRO_ReadAngRate(gyroData);
-		  //GYRO_ConvertToDPS(gyroData, gyroDPS);
-	  }
+//	  while (readingGyro == 1){
+//		  //GYRO_ReadAngRate(gyroData);
+//		  //GYRO_ConvertToDPS(gyroData, gyroDPS);
+//	  }
 
 
 
   Magnetorquers_Init();
-
-  HAL_StatusTypeDef can_operation_status;
-  can_operation_status = CAN_Init();
-  if (can_operation_status != HAL_OK) goto error;
-  //hello
 
   /* USER CODE END 2 */
 
@@ -712,6 +707,7 @@ static void MX_GPIO_Init(void)
 void on_message_received(const CAN_HandleTypeDef *hcan, const CANMessage *msg)
 {
 	// TODO: Add CAN message reception here
+	CANMessage item = *msg;
 }
 
 void on_error_occurred(const CANWrapper_ErrorInfo *error)
@@ -734,7 +730,16 @@ void StartDefaultTask(void *argument)
   /* Infinite loop */
   for(;;)
   {
-    osDelay(1);
+//    uint8_t msg_body[CAN_MAX_BODY_SIZE] = {0};
+//		uint8_t tel_key = CREATE_TELEMETRY_KEY(TEL_PCB_TEMP, NODE_ADCS);
+//		SET_MSG_DATA(msg_body, 0, uint8_t, tel_key);
+//		SET_MSG_DATA(msg_body, 1, uint8_t, 0);
+//		SET_MSG_DATA(msg_body, 2, uint8_t, 0); // packet #
+//		SET_MSG_DATA(msg_body, 3, uint16_t, 17);
+//
+//		// send the message.
+//		CANWrapper_Transmit(&hcan1, NODE_CDH, CMD_CDH_PROCESS_TELEMETRY_REPORT, msg_body);
+		osDelay(1);
   }
   /* USER CODE END 5 */
 }
