@@ -28,8 +28,6 @@
 #include "LEDs_driver.h"
 #include "MAX6822_driver.h"
 #include "tuk/tuk.h"
-#include "can.h" // TODO: remove old CAN implementation
-#include "can_message_queue.h"
 #include "Magnetorquers_driver.h"
 #include "GYRO_A3G4250DTR_driver.h"
 #include "magnetometer_driver.h"
@@ -67,7 +65,6 @@ const osThreadAttr_t defaultTask_attributes = {
   .priority = (osPriority_t) osPriorityNormal,
 };
 /* USER CODE BEGIN PV */
-CANQueue_t can_queue;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -124,8 +121,6 @@ int main(void)
   MX_SPI3_Init();
   MX_TIM16_Init();
   /* USER CODE BEGIN 2 */
-  CAN_Queue_Init(&can_queue);
-
   MAX6822_Init();
 
   LEDs_Init();
@@ -262,83 +257,83 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-      MAX6822_WDI_Toggle();
-
-      if(!CAN_Queue_IsEmpty(&can_queue))
-      {
-          CANMessage_t can_message;
-          CAN_Queue_Dequeue(&can_queue, &can_message);
-          switch (can_message.command)
-          {
-              case 0xB0: //STM32 Reset
-                  CAN_Send_Default_ACK(can_message);
-                  MAX6822_Manual_Reset();
-                  break;
-
-              case 0xB1: //Magnetorquer 1 Full Strength
-                  Magnetorquer1_Full_Strength();
-                  CAN_Send_Default_ACK(can_message);
-                  break;
-
-              case 0xB2: //Magnetorquer 2 Full Strength
-                  Magnetorquer2_Full_Strength();
-                  CAN_Send_Default_ACK(can_message);
-                  break;
-
-              case 0xB3: //Magnetorquer 3 Full Strength
-                  Magnetorquer3_Full_Strength();
-                  CAN_Send_Default_ACK(can_message);
-                  break;
-
-              case 0xB4: //Magnetorquer 1 Off
-                  Magnetorquer1_Off();
-                  CAN_Send_Default_ACK(can_message);
-                  break;
-
-              case 0xB5: //Magnetorquer 2 Off
-                  Magnetorquer2_Off();
-                  CAN_Send_Default_ACK(can_message);
-                  break;
-
-              case 0xB6: //Magnetorquer 3 Off
-                  Magnetorquer3_Off();
-                  CAN_Send_Default_ACK(can_message);
-                  break;
-
-              case 0xB7: //Magnetorquer 1 Forward Direction
-                  Magnetorquer1_Forward();
-                  CAN_Send_Default_ACK(can_message);
-                  break;
-
-              case 0xB8: //Magnetorquer 2 Forward Direction
-                  Magnetorquer2_Forward();
-                  CAN_Send_Default_ACK(can_message);
-                  break;
-
-              case 0xB9: //Magnetorquer 3 Forward Direction
-                  Magnetorquer3_Forward();
-                  CAN_Send_Default_ACK(can_message);
-                  break;
-
-              case 0xBA: //Magnetorquer 1 Reverse Direction
-                  Magnetorquer1_Reverse();
-                  CAN_Send_Default_ACK(can_message);
-                  break;
-
-              case 0xBB: //Magnetorquer 2 Reverse Direction
-                  Magnetorquer2_Reverse();
-                  CAN_Send_Default_ACK(can_message);
-                  break;
-
-              case 0xBC: //Magnetorquer 3 Reverse Direction
-                  Magnetorquer3_Reverse();
-                  CAN_Send_Default_ACK(can_message);
-                  break;
-
-              default:
-                  break;
-          }
-      }
+//      MAX6822_WDI_Toggle();
+//
+//      if(!CAN_Queue_IsEmpty(&can_queue))
+//      {
+//          CANMessage_t can_message;
+//          CAN_Queue_Dequeue(&can_queue, &can_message);
+//          switch (can_message.command)
+//          {
+//              case 0xB0: //STM32 Reset
+//                  CAN_Send_Default_ACK(can_message);
+//                  MAX6822_Manual_Reset();
+//                  break;
+//
+//              case 0xB1: //Magnetorquer 1 Full Strength
+//                  Magnetorquer1_Full_Strength();
+//                  CAN_Send_Default_ACK(can_message);
+//                  break;
+//
+//              case 0xB2: //Magnetorquer 2 Full Strength
+//                  Magnetorquer2_Full_Strength();
+//                  CAN_Send_Default_ACK(can_message);
+//                  break;
+//
+//              case 0xB3: //Magnetorquer 3 Full Strength
+//                  Magnetorquer3_Full_Strength();
+//                  CAN_Send_Default_ACK(can_message);
+//                  break;
+//
+//              case 0xB4: //Magnetorquer 1 Off
+//                  Magnetorquer1_Off();
+//                  CAN_Send_Default_ACK(can_message);
+//                  break;
+//
+//              case 0xB5: //Magnetorquer 2 Off
+//                  Magnetorquer2_Off();
+//                  CAN_Send_Default_ACK(can_message);
+//                  break;
+//
+//              case 0xB6: //Magnetorquer 3 Off
+//                  Magnetorquer3_Off();
+//                  CAN_Send_Default_ACK(can_message);
+//                  break;
+//
+//              case 0xB7: //Magnetorquer 1 Forward Direction
+//                  Magnetorquer1_Forward();
+//                  CAN_Send_Default_ACK(can_message);
+//                  break;
+//
+//              case 0xB8: //Magnetorquer 2 Forward Direction
+//                  Magnetorquer2_Forward();
+//                  CAN_Send_Default_ACK(can_message);
+//                  break;
+//
+//              case 0xB9: //Magnetorquer 3 Forward Direction
+//                  Magnetorquer3_Forward();
+//                  CAN_Send_Default_ACK(can_message);
+//                  break;
+//
+//              case 0xBA: //Magnetorquer 1 Reverse Direction
+//                  Magnetorquer1_Reverse();
+//                  CAN_Send_Default_ACK(can_message);
+//                  break;
+//
+//              case 0xBB: //Magnetorquer 2 Reverse Direction
+//                  Magnetorquer2_Reverse();
+//                  CAN_Send_Default_ACK(can_message);
+//                  break;
+//
+//              case 0xBC: //Magnetorquer 3 Reverse Direction
+//                  Magnetorquer3_Reverse();
+//                  CAN_Send_Default_ACK(can_message);
+//                  break;
+//
+//              default:
+//                  break;
+//          }
+//      }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -702,34 +697,17 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-/**
-  * @brief  Rx Fifo 0 message pending callback
-  * @param  hcan: pointer to a CAN_HandleTypeDef structure that contains
-  *         the configuration information for the specified CAN.
-  * @retval None
-  */
-void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan1)
-{
-    HAL_StatusTypeDef operation_status;
-    operation_status = CAN_Message_Received();
-    if (operation_status != HAL_OK)
-    {
-        //TODO: Implement error handling for CAN message receives
-    }
-}
-
-
-int _write(int file, char *ptr, int len)
-{
-  (void)file;
-  int DataIdx;
-
-  for (DataIdx = 0; DataIdx < len; DataIdx++)
-  {
-    ITM_SendChar(*ptr++);
-  }
-  return len;
-}
+//int _write(int file, char *ptr, int len)
+//{
+//  (void)file;
+//  int DataIdx;
+//
+//  for (DataIdx = 0; DataIdx < len; DataIdx++)
+//  {
+//    ITM_SendChar(*ptr++);
+//  }
+//  return len;
+//}
 
 void on_message_received(const CAN_HandleTypeDef *hcan, const CANMessage *msg)
 {
