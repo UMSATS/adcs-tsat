@@ -64,7 +64,18 @@ const osThreadAttr_t defaultTask_attributes = {
   .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
+
+
+
+
 /* USER CODE BEGIN PV */
+// NEW
+uint8_t magnetorquer_id_status[3]= {0};
+
+uint8_t magnetorquer_direction_status[3]= {0};
+
+
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -178,9 +189,9 @@ int main(void)
 //	  float prevY = magTesla[1];
 //	  float prevZ = magTesla[2];
 //
-//	  magTeslaX = exponentialFilter(prevX,magTeslaX,alpha);
-//	  magTeslaY = exponentialFilter(prevY,magTeslaY,alpha);
-//	  magTeslaZ = exponentialFilter(prevZ,magTeslaZ,alpha);
+//	  magTesla[0] = exponentialFilter(prevX,magTeslaX,alpha);
+//	  magTesla[1] = exponentialFilter(prevY,magTeslaY,alpha);
+//	  magTesla[2] = exponentialFilter(prevZ,magTeslaZ,alpha);
 //
 //
 //	   printf("Magnetometer X: %.9f\n", magTeslaX);
@@ -189,17 +200,17 @@ int main(void)
 //
 //	   count++;
 //	   printf("Count: %d\n", count);
-//
-//
-//	  HAL_Delay(1000);
-//
-//	  }
 
+
+//	  HAL_Delay(1000);
+
+//	  }
+//
 //	  while (readingGyro == 1){
 //		  //GYRO_ReadAngRate(gyroData);
 //		  //GYRO_ConvertToDPS(gyroData, gyroDPS);
 //	  }
-
+//
 
 
   Magnetorquers_Init();
@@ -704,11 +715,121 @@ static void MX_GPIO_Init(void)
 //  return len;
 //}
 
+
+
+
+
+
+
+
+
+
+
+
+
+//NEW
+void magnetorquer_update(uint8_t id, uint8_t direction)
+{
+    switch(id)
+    {
+        case 0:
+
+        	if (direction == 1)
+        	{
+
+        		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_0, GPIO_PIN_RESET);
+        		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_SET);
+        	}
+
+        	else
+        	{
+        		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_0, GPIO_PIN_SET);
+        		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_RESET);
+        	}
+        	break;
+
+        case 1:
+            if (direction == 1)
+            {
+                HAL_GPIO_WritePin(GPIOA, GPIO_PIN_2, GPIO_PIN_RESET);
+                HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, GPIO_PIN_SET);
+            }
+
+            else
+            {
+                HAL_GPIO_WritePin(GPIOA, GPIO_PIN_2, GPIO_PIN_SET);
+                HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, GPIO_PIN_RESET);
+            }
+            break;
+
+
+        case 2:
+             if (direction == 1)
+             {
+                 HAL_GPIO_WritePin(GPIOC, GPIO_PIN_4, GPIO_PIN_RESET);
+                 HAL_GPIO_WritePin(GPIOC, GPIO_PIN_5, GPIO_PIN_SET);
+             }
+
+             else
+             {
+                 HAL_GPIO_WritePin(GPIOC, GPIO_PIN_4, GPIO_PIN_SET);
+                 HAL_GPIO_WritePin(GPIOC, GPIO_PIN_5, GPIO_PIN_RESET);
+
+             }
+             break;
+    }
+
+}
+
+
+
+
 void on_message_received(const CAN_HandleTypeDef *hcan, const CANMessage *msg)
 {
 	// TODO: Add CAN message reception here
-	CANMessage item = *msg;
+	//CANMessage item = *msg;
+
+	uint8_t body[CAN_MAX_BODY_SIZE] = {0};
+	CANWrapper_Transmit(&hcan1, NODE_PAYLOAD, CMD_PLD_GET_ACTIVE_ENVS, body);
+
+
+	//uint_8 magnetorquer_id_status[3]= {0};
+	if (msg->cmd == CMD_ADCS_SET_MAGNETORQUER_DIRECTION){
+		uint8_t id = GET_MSG_DATA(msg->body, 0, uint8_t);
+		uint8_t direction = GET_MSG_DATA(msg->body, 1, uint8_t);
+		//uint8_t direction = 0;
+
+
+
+//		uint8_t id = msg_body[0];
+//		uint8_t direction = msg_body[1];
+
+		//NEW
+		magnetorquer_direction_status[id]= direction;
+		magnetorquer_update(id, direction);
+
+	}
+
+
+	//NEW
+	if (msg->cmd == CMD_ADCS_GET_MAGNETORQUER_DIRECTION){
+		uint8_t id = GET_MSG_DATA(msg->body, 0, uint8_t);
+
+		uint8_t ack_msg_body [7] = {0} ;
+
+		SET_MSG_DATA(ack_msg_body, 0, CmdID, CMD_ADCS_GET_MAGNETORQUER_DIRECTION);
+		SET_MSG_DATA(ack_msg_body, 1, uint8_t, magnetorquer_direction_status[id] );
+
+		CANWrapper_Transmit(&hcan1, NODE_CDH, CMD_CDH_PROCESS_RETURN, ack_msg_body);
+	}
 }
+
+
+
+
+
+
+
 
 void on_error_occurred(const CANWrapper_ErrorInfo *error)
 {
@@ -728,18 +849,103 @@ void StartDefaultTask(void *argument)
 {
   /* USER CODE BEGIN 5 */
   /* Infinite loop */
+
+
+	float exponentialFilter (float curr, float prev, float alpha){
+		  	  return alpha*curr + (1.0f - alpha) * prev;
+		    }
+
+	int16_t gyroData[3] = {0};
+	float gyroDPS[3] = {0,0};
+
+	int16_t magData[3] = {0};
+	float magTesla[3] = {0.0};
+
+	float magTeslaX = 0.0f;
+	float magTeslaY = 0.0f;
+	float magTeslaZ = 0.0f;
+
+	float prevX = 0.0f;
+	float prevY = 0.0f;
+	float prevZ = 0.0f;
+
+	MAG_ReadMagneticField(magData);
+	MAG_ConvertToTeslas(magData, magTesla);
+
+	prevX = magTesla[0];
+	prevY = magTesla[1];
+	prevZ = magTesla[2];
+
+	magTeslaX = prevX;
+	magTeslaY = prevY;
+	magTeslaZ = prevZ;
+
+	float alpha = 0.2f;
+
+	bool readingMag = true;
+	bool readingGyro = false;
+
+	uint8_t count = 0 ;
+
+
+
+
   for(;;)
   {
-//    uint8_t msg_body[CAN_MAX_BODY_SIZE] = {0};
-//		uint8_t tel_key = CREATE_TELEMETRY_KEY(TEL_PCB_TEMP, NODE_ADCS);
-//		SET_MSG_DATA(msg_body, 0, uint8_t, tel_key);
-//		SET_MSG_DATA(msg_body, 1, uint8_t, 0);
-//		SET_MSG_DATA(msg_body, 2, uint8_t, 0); // packet #
-//		SET_MSG_DATA(msg_body, 3, uint16_t, 17);
+
+	  	  MAG_ReadMagneticField(magData);
+	   	  MAG_ConvertToTeslas(magData, magTesla);
+
+	  	  float prevX = magTesla[0];
+	  	  float prevY = magTesla[1];
+	  	  float prevZ = magTesla[2];
+
+	  	  magTesla[0] = exponentialFilter(prevX,magTeslaX,alpha);
+	  	  magTesla[1] = exponentialFilter(prevY,magTeslaY,alpha);
+	  	  magTesla[2] = exponentialFilter(prevZ,magTeslaZ,alpha);
+
+
+//	  	   printf("Magnetometer X: %.9f\n", magTeslaX);
+//	  	   printf("Magnetometer Y: %.9f\n", magTeslaY);
+//	  	   printf("Magnetometer Z: %.9f\n", magTeslaZ);
 //
-//		// send the message.
-//		CANWrapper_Transmit(&hcan1, NODE_CDH, CMD_CDH_PROCESS_TELEMETRY_REPORT, msg_body);
-		osDelay(1);
+	  	   count++;
+//	  	   printf("Count: %d\n", count);
+//
+
+
+
+
+    uint8_t msg_body[CAN_MAX_BODY_SIZE] = {0};
+
+
+
+
+	uint8_t tel_key_0 = CREATE_TELEMETRY_KEY(TEL_MAGNETIC_FIELD, NODE_ADCS);
+	SET_MSG_DATA(msg_body, 0, uint8_t, tel_key_0);
+	SET_MSG_DATA(msg_body, 1, uint8_t, count);
+	SET_MSG_DATA(msg_body, 2, uint8_t, 0); // packet #
+	SET_MSG_DATA(msg_body, 3, float, magTesla[0]);
+	CANWrapper_Transmit(&hcan1, NODE_CDH, CMD_CDH_PROCESS_TELEMETRY_REPORT, msg_body);
+
+
+	uint8_t tel_key_1 = CREATE_TELEMETRY_KEY(TEL_MAGNETIC_FIELD, NODE_ADCS);
+	SET_MSG_DATA(msg_body, 0, uint8_t, tel_key_1);
+	SET_MSG_DATA(msg_body, 1, uint8_t, count);
+	SET_MSG_DATA(msg_body, 2, uint8_t, 1); // packet #
+	SET_MSG_DATA(msg_body, 3, float, magTesla[1]);
+	CANWrapper_Transmit(&hcan1, NODE_CDH, CMD_CDH_PROCESS_TELEMETRY_REPORT, msg_body);
+
+
+	uint8_t tel_key_2 = CREATE_TELEMETRY_KEY(TEL_MAGNETIC_FIELD, NODE_ADCS);
+	SET_MSG_DATA(msg_body, 0, uint8_t, tel_key_2);
+	SET_MSG_DATA(msg_body, 1, uint8_t, count);
+	SET_MSG_DATA(msg_body, 2, uint8_t, 2); // packet #
+	SET_MSG_DATA(msg_body, 3, float, magTesla[2]);
+
+	// send the message.
+	CANWrapper_Transmit(&hcan1, NODE_CDH, CMD_CDH_PROCESS_TELEMETRY_REPORT, msg_body);
+	osDelay(1000);
   }
   /* USER CODE END 5 */
 }
