@@ -18,6 +18,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "cmsis_os.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -26,8 +27,7 @@
 
 #include "LEDs_driver.h"
 #include "MAX6822_driver.h"
-#include "can.h"
-#include "can_message_queue.h"
+#include "tuk/tuk.h"
 #include "Magnetorquers_driver.h"
 #include "GYRO_A3G4250DTR_driver.h"
 #include "magnetometer_driver.h"
@@ -57,8 +57,24 @@ SPI_HandleTypeDef hspi3;
 
 TIM_HandleTypeDef htim16;
 
+/* Definitions for defaultTask */
+osThreadId_t defaultTaskHandle;
+const osThreadAttr_t defaultTask_attributes = {
+  .name = "defaultTask",
+  .stack_size = 128 * 4,
+  .priority = (osPriority_t) osPriorityNormal,
+};
+
+
+
+
 /* USER CODE BEGIN PV */
-CANQueue_t can_queue;
+// NEW
+uint8_t magnetorquer_id_status[3]= {0};
+
+uint8_t magnetorquer_direction_status[3]= {0};
+
+
 
 /* USER CODE END PV */
 
@@ -70,8 +86,11 @@ static void MX_SPI2_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_SPI3_Init(void);
 static void MX_TIM16_Init(void);
-/* USER CODE BEGIN PFP */
+void StartDefaultTask(void *argument);
 
+/* USER CODE BEGIN PFP */
+static void on_message_received(const CAN_HandleTypeDef *hcan, const CANMessage *msg);
+static void on_error_occurred(const CANWrapper_ErrorInfo *error);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -113,8 +132,6 @@ int main(void)
   MX_SPI3_Init();
   MX_TIM16_Init();
   /* USER CODE BEGIN 2 */
-  CAN_Queue_Init(&can_queue);
-
   MAX6822_Init();
 
   LEDs_Init();
@@ -163,129 +180,166 @@ int main(void)
   int count = 0 ;
 
 
-	  while(readingMag == 1){
+//	  while(readingMag == 1){
+//
+//	  MAG_ReadMagneticField(magData);
+// 	  MAG_ConvertToTeslas(magData, magTesla);
+//
+//	  float prevX = magTesla[0];
+//	  float prevY = magTesla[1];
+//	  float prevZ = magTesla[2];
+//
+//	  magTesla[0] = exponentialFilter(prevX,magTeslaX,alpha);
+//	  magTesla[1] = exponentialFilter(prevY,magTeslaY,alpha);
+//	  magTesla[2] = exponentialFilter(prevZ,magTeslaZ,alpha);
+//
+//
+//	   printf("Magnetometer X: %.9f\n", magTeslaX);
+//	   printf("Magnetometer Y: %.9f\n", magTeslaY);
+//	   printf("Magnetometer Z: %.9f\n", magTeslaZ);
+//
+//	   count++;
+//	   printf("Count: %d\n", count);
 
-	  MAG_ReadMagneticField(magData);
- 	  MAG_ConvertToTeslas(magData, magTesla);
 
-	  float prevX = magTesla[0];
-	  float prevY = magTesla[1];
-	  float prevZ = magTesla[2];
+//	  HAL_Delay(1000);
 
-	  magTeslaX = exponentialFilter(prevX,magTeslaX,alpha);
-	  magTeslaY = exponentialFilter(prevY,magTeslaY,alpha);
-	  magTeslaZ = exponentialFilter(prevZ,magTeslaZ,alpha);
-
-
-	   printf("Magnetometer X: %.9f\n", magTeslaX);
-	   printf("Magnetometer Y: %.9f\n", magTeslaY);
-	   printf("Magnetometer Z: %.9f\n", magTeslaZ);
-
-	   count++;
-	   printf("Count: %d\n", count);
-
-
-	  HAL_Delay(1000);
-
-	  }
-
-	  while (readingGyro == 1){
-		  //GYRO_ReadAngRate(gyroData);
-		  //GYRO_ConvertToDPS(gyroData, gyroDPS);
-	  }
-
+//	  }
+//
+//	  while (readingGyro == 1){
+//		  //GYRO_ReadAngRate(gyroData);
+//		  //GYRO_ConvertToDPS(gyroData, gyroDPS);
+//	  }
+//
 
 
   Magnetorquers_Init();
 
-  HAL_StatusTypeDef can_operation_status;
-  can_operation_status = CAN_Init();
-  if (can_operation_status != HAL_OK) goto error;
-  //hello
-
   /* USER CODE END 2 */
 
+  /* Init scheduler */
+  osKernelInitialize();
+
+  /* USER CODE BEGIN RTOS_MUTEX */
+  /* add mutexes, ... */
+  /* USER CODE END RTOS_MUTEX */
+
+  /* USER CODE BEGIN RTOS_SEMAPHORES */
+  /* add semaphores, ... */
+  /* USER CODE END RTOS_SEMAPHORES */
+
+  /* USER CODE BEGIN RTOS_TIMERS */
+  /* start timers, add new ones, ... */
+  /* USER CODE END RTOS_TIMERS */
+
+  /* USER CODE BEGIN RTOS_QUEUES */
+  /* add queues, ... */
+  /* USER CODE END RTOS_QUEUES */
+
+  /* Create the thread(s) */
+  /* creation of defaultTask */
+  defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
+
+  /* USER CODE BEGIN RTOS_THREADS */
+  /* add threads, ... */
+  const CANWrapper_InitTypeDef cw_init = {
+  		.node_id = NODE_ADCS,    // your subsystem's unique ID in the CAN network.
+  		.message_callback = &on_message_received, // called when a message is received and ready to be handled.
+  		.error_callback = &on_error_occurred      // called when a communication error occurs.
+  };
+  CANWrapper_CAN_Start(&hcan1);
+  CANWrapper_Init(&cw_init);
+  /* USER CODE END RTOS_THREADS */
+
+  /* USER CODE BEGIN RTOS_EVENTS */
+  /* add events, ... */
+  /* USER CODE END RTOS_EVENTS */
+
+  /* Start scheduler */
+  osKernelStart();
+
+  /* We should never get here as control is now taken by the scheduler */
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-      MAX6822_WDI_Toggle();
-
-      if(!CAN_Queue_IsEmpty(&can_queue))
-      {
-          CANMessage_t can_message;
-          CAN_Queue_Dequeue(&can_queue, &can_message);
-          switch (can_message.command)
-          {
-              case 0xB0: //STM32 Reset
-                  CAN_Send_Default_ACK(can_message);
-                  MAX6822_Manual_Reset();
-                  break;
-
-              case 0xB1: //Magnetorquer 1 Full Strength
-                  Magnetorquer1_Full_Strength();
-                  CAN_Send_Default_ACK(can_message);
-                  break;
-
-              case 0xB2: //Magnetorquer 2 Full Strength
-                  Magnetorquer2_Full_Strength();
-                  CAN_Send_Default_ACK(can_message);
-                  break;
-
-              case 0xB3: //Magnetorquer 3 Full Strength
-                  Magnetorquer3_Full_Strength();
-                  CAN_Send_Default_ACK(can_message);
-                  break;
-
-              case 0xB4: //Magnetorquer 1 Off
-                  Magnetorquer1_Off();
-                  CAN_Send_Default_ACK(can_message);
-                  break;
-
-              case 0xB5: //Magnetorquer 2 Off
-                  Magnetorquer2_Off();
-                  CAN_Send_Default_ACK(can_message);
-                  break;
-
-              case 0xB6: //Magnetorquer 3 Off
-                  Magnetorquer3_Off();
-                  CAN_Send_Default_ACK(can_message);
-                  break;
-
-              case 0xB7: //Magnetorquer 1 Forward Direction
-                  Magnetorquer1_Forward();
-                  CAN_Send_Default_ACK(can_message);
-                  break;
-
-              case 0xB8: //Magnetorquer 2 Forward Direction
-                  Magnetorquer2_Forward();
-                  CAN_Send_Default_ACK(can_message);
-                  break;
-
-              case 0xB9: //Magnetorquer 3 Forward Direction
-                  Magnetorquer3_Forward();
-                  CAN_Send_Default_ACK(can_message);
-                  break;
-
-              case 0xBA: //Magnetorquer 1 Reverse Direction
-                  Magnetorquer1_Reverse();
-                  CAN_Send_Default_ACK(can_message);
-                  break;
-
-              case 0xBB: //Magnetorquer 2 Reverse Direction
-                  Magnetorquer2_Reverse();
-                  CAN_Send_Default_ACK(can_message);
-                  break;
-
-              case 0xBC: //Magnetorquer 3 Reverse Direction
-                  Magnetorquer3_Reverse();
-                  CAN_Send_Default_ACK(can_message);
-                  break;
-
-              default:
-                  break;
-          }
-      }
+//      MAX6822_WDI_Toggle();
+//
+//      if(!CAN_Queue_IsEmpty(&can_queue))
+//      {
+//          CANMessage_t can_message;
+//          CAN_Queue_Dequeue(&can_queue, &can_message);
+//          switch (can_message.command)
+//          {
+//              case 0xB0: //STM32 Reset
+//                  CAN_Send_Default_ACK(can_message);
+//                  MAX6822_Manual_Reset();
+//                  break;
+//
+//              case 0xB1: //Magnetorquer 1 Full Strength
+//                  Magnetorquer1_Full_Strength();
+//                  CAN_Send_Default_ACK(can_message);
+//                  break;
+//
+//              case 0xB2: //Magnetorquer 2 Full Strength
+//                  Magnetorquer2_Full_Strength();
+//                  CAN_Send_Default_ACK(can_message);
+//                  break;
+//
+//              case 0xB3: //Magnetorquer 3 Full Strength
+//                  Magnetorquer3_Full_Strength();
+//                  CAN_Send_Default_ACK(can_message);
+//                  break;
+//
+//              case 0xB4: //Magnetorquer 1 Off
+//                  Magnetorquer1_Off();
+//                  CAN_Send_Default_ACK(can_message);
+//                  break;
+//
+//              case 0xB5: //Magnetorquer 2 Off
+//                  Magnetorquer2_Off();
+//                  CAN_Send_Default_ACK(can_message);
+//                  break;
+//
+//              case 0xB6: //Magnetorquer 3 Off
+//                  Magnetorquer3_Off();
+//                  CAN_Send_Default_ACK(can_message);
+//                  break;
+//
+//              case 0xB7: //Magnetorquer 1 Forward Direction
+//                  Magnetorquer1_Forward();
+//                  CAN_Send_Default_ACK(can_message);
+//                  break;
+//
+//              case 0xB8: //Magnetorquer 2 Forward Direction
+//                  Magnetorquer2_Forward();
+//                  CAN_Send_Default_ACK(can_message);
+//                  break;
+//
+//              case 0xB9: //Magnetorquer 3 Forward Direction
+//                  Magnetorquer3_Forward();
+//                  CAN_Send_Default_ACK(can_message);
+//                  break;
+//
+//              case 0xBA: //Magnetorquer 1 Reverse Direction
+//                  Magnetorquer1_Reverse();
+//                  CAN_Send_Default_ACK(can_message);
+//                  break;
+//
+//              case 0xBB: //Magnetorquer 2 Reverse Direction
+//                  Magnetorquer2_Reverse();
+//                  CAN_Send_Default_ACK(can_message);
+//                  break;
+//
+//              case 0xBC: //Magnetorquer 3 Reverse Direction
+//                  Magnetorquer3_Reverse();
+//                  CAN_Send_Default_ACK(can_message);
+//                  break;
+//
+//              default:
+//                  break;
+//          }
+//      }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -317,7 +371,7 @@ void SystemClock_Config(void)
   */
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
-  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+  RCC_OscInitStruct.HSICalibrationValue = 64;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
   RCC_OscInitStruct.PLL.PLLM = 1;
@@ -380,7 +434,6 @@ static void MX_ADC1_Init(void)
   hadc1.Init.DMAContinuousRequests = DISABLE;
   hadc1.Init.Overrun = ADC_OVR_DATA_PRESERVED;
   hadc1.Init.OversamplingMode = DISABLE;
-  hadc1.Init.DFSDMConfig = ADC_DFSDM_MODE_ENABLE;
   if (HAL_ADC_Init(&hadc1) != HAL_OK)
   {
     Error_Handler();
@@ -642,7 +695,7 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
-  HAL_NVIC_SetPriority(EXTI9_5_IRQn, 0, 0);
+  HAL_NVIC_SetPriority(EXTI9_5_IRQn, 5, 0);
   HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
 
 /* USER CODE BEGIN MX_GPIO_Init_2 */
@@ -650,37 +703,252 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-/**
-  * @brief  Rx Fifo 0 message pending callback
-  * @param  hcan: pointer to a CAN_HandleTypeDef structure that contains
-  *         the configuration information for the specified CAN.
-  * @retval None
-  */
-void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan1)
+//int _write(int file, char *ptr, int len)
+//{
+//  (void)file;
+//  int DataIdx;
+//
+//  for (DataIdx = 0; DataIdx < len; DataIdx++)
+//  {
+//    ITM_SendChar(*ptr++);
+//  }
+//  return len;
+//}
+
+
+
+
+
+
+
+
+
+
+
+
+
+//NEW
+void magnetorquer_update(uint8_t id, uint8_t direction)
 {
-    HAL_StatusTypeDef operation_status;
-    operation_status = CAN_Message_Received();
-    if (operation_status != HAL_OK)
+    switch(id)
     {
-        //TODO: Implement error handling for CAN message receives
+        case 0:
+
+        	if (direction == 1)
+        	{
+
+        		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_0, GPIO_PIN_RESET);
+        		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_SET);
+        	}
+
+        	else
+        	{
+        		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_0, GPIO_PIN_SET);
+        		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_RESET);
+        	}
+        	break;
+
+        case 1:
+            if (direction == 1)
+            {
+                HAL_GPIO_WritePin(GPIOA, GPIO_PIN_2, GPIO_PIN_RESET);
+                HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, GPIO_PIN_SET);
+            }
+
+            else
+            {
+                HAL_GPIO_WritePin(GPIOA, GPIO_PIN_2, GPIO_PIN_SET);
+                HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, GPIO_PIN_RESET);
+            }
+            break;
+
+
+        case 2:
+             if (direction == 1)
+             {
+                 HAL_GPIO_WritePin(GPIOC, GPIO_PIN_4, GPIO_PIN_RESET);
+                 HAL_GPIO_WritePin(GPIOC, GPIO_PIN_5, GPIO_PIN_SET);
+             }
+
+             else
+             {
+                 HAL_GPIO_WritePin(GPIOC, GPIO_PIN_4, GPIO_PIN_SET);
+                 HAL_GPIO_WritePin(GPIOC, GPIO_PIN_5, GPIO_PIN_RESET);
+
+             }
+             break;
     }
+
 }
 
 
-int _write(int file, char *ptr, int len)
+
+
+void on_message_received(const CAN_HandleTypeDef *hcan, const CANMessage *msg)
 {
-  (void)file;
-  int DataIdx;
+	// TODO: Add CAN message reception here
+	//CANMessage item = *msg;
 
-  for (DataIdx = 0; DataIdx < len; DataIdx++)
-  {
-    ITM_SendChar(*ptr++);
-  }
-  return len;
+	uint8_t body[CAN_MAX_BODY_SIZE] = {0};
+	CANWrapper_Transmit(&hcan1, NODE_PAYLOAD, CMD_PLD_GET_ACTIVE_ENVS, body);
+
+
+	//uint_8 magnetorquer_id_status[3]= {0};
+	if (msg->cmd == CMD_ADCS_SET_MAGNETORQUER_DIRECTION){
+		uint8_t id = GET_MSG_DATA(msg->body, 0, uint8_t);
+		uint8_t direction = GET_MSG_DATA(msg->body, 1, uint8_t);
+		//uint8_t direction = 0;
+
+
+
+//		uint8_t id = msg_body[0];
+//		uint8_t direction = msg_body[1];
+
+		//NEW
+		magnetorquer_direction_status[id]= direction;
+		magnetorquer_update(id, direction);
+
+	}
+
+
+	//NEW
+	if (msg->cmd == CMD_ADCS_GET_MAGNETORQUER_DIRECTION){
+		uint8_t id = GET_MSG_DATA(msg->body, 0, uint8_t);
+
+		uint8_t ack_msg_body [7] = {0} ;
+
+		SET_MSG_DATA(ack_msg_body, 0, CmdID, CMD_ADCS_GET_MAGNETORQUER_DIRECTION);
+		SET_MSG_DATA(ack_msg_body, 1, uint8_t, magnetorquer_direction_status[id] );
+
+		CANWrapper_Transmit(&hcan1, NODE_CDH, CMD_CDH_PROCESS_RETURN, ack_msg_body);
+	}
 }
 
+
+
+
+
+
+
+
+void on_error_occurred(const CANWrapper_ErrorInfo *error)
+{
+	// TODO: Add CAN error handling here
+}
 
 /* USER CODE END 4 */
+
+/* USER CODE BEGIN Header_StartDefaultTask */
+/**
+  * @brief  Function implementing the defaultTask thread.
+  * @param  argument: Not used
+  * @retval None
+  */
+/* USER CODE END Header_StartDefaultTask */
+void StartDefaultTask(void *argument)
+{
+  /* USER CODE BEGIN 5 */
+  /* Infinite loop */
+
+
+	float exponentialFilter (float curr, float prev, float alpha){
+		  	  return alpha*curr + (1.0f - alpha) * prev;
+		    }
+
+	int16_t gyroData[3] = {0};
+	float gyroDPS[3] = {0,0};
+
+	int16_t magData[3] = {0};
+	float magTesla[3] = {0.0};
+
+	float magTeslaX = 0.0f;
+	float magTeslaY = 0.0f;
+	float magTeslaZ = 0.0f;
+
+	float prevX = 0.0f;
+	float prevY = 0.0f;
+	float prevZ = 0.0f;
+
+	MAG_ReadMagneticField(magData);
+	MAG_ConvertToTeslas(magData, magTesla);
+
+	prevX = magTesla[0];
+	prevY = magTesla[1];
+	prevZ = magTesla[2];
+
+	magTeslaX = prevX;
+	magTeslaY = prevY;
+	magTeslaZ = prevZ;
+
+	float alpha = 0.2f;
+
+	bool readingMag = true;
+	bool readingGyro = false;
+
+	uint8_t count = 0 ;
+
+
+
+
+  for(;;)
+  {
+
+	  	  MAG_ReadMagneticField(magData);
+	   	  MAG_ConvertToTeslas(magData, magTesla);
+
+	  	  float prevX = magTesla[0];
+	  	  float prevY = magTesla[1];
+	  	  float prevZ = magTesla[2];
+
+	  	  magTesla[0] = exponentialFilter(prevX,magTeslaX,alpha);
+	  	  magTesla[1] = exponentialFilter(prevY,magTeslaY,alpha);
+	  	  magTesla[2] = exponentialFilter(prevZ,magTeslaZ,alpha);
+
+
+//	  	   printf("Magnetometer X: %.9f\n", magTeslaX);
+//	  	   printf("Magnetometer Y: %.9f\n", magTeslaY);
+//	  	   printf("Magnetometer Z: %.9f\n", magTeslaZ);
+//
+	  	   count++;
+//	  	   printf("Count: %d\n", count);
+//
+
+
+
+
+    uint8_t msg_body[CAN_MAX_BODY_SIZE] = {0};
+
+
+
+
+	uint8_t tel_key_0 = CREATE_TELEMETRY_KEY(TEL_MAGNETIC_FIELD, NODE_ADCS);
+	SET_MSG_DATA(msg_body, 0, uint8_t, tel_key_0);
+	SET_MSG_DATA(msg_body, 1, uint8_t, count);
+	SET_MSG_DATA(msg_body, 2, uint8_t, 0); // packet #
+	SET_MSG_DATA(msg_body, 3, float, magTesla[0]);
+	CANWrapper_Transmit(&hcan1, NODE_CDH, CMD_CDH_PROCESS_TELEMETRY_REPORT, msg_body);
+
+
+	uint8_t tel_key_1 = CREATE_TELEMETRY_KEY(TEL_MAGNETIC_FIELD, NODE_ADCS);
+	SET_MSG_DATA(msg_body, 0, uint8_t, tel_key_1);
+	SET_MSG_DATA(msg_body, 1, uint8_t, count);
+	SET_MSG_DATA(msg_body, 2, uint8_t, 1); // packet #
+	SET_MSG_DATA(msg_body, 3, float, magTesla[1]);
+	CANWrapper_Transmit(&hcan1, NODE_CDH, CMD_CDH_PROCESS_TELEMETRY_REPORT, msg_body);
+
+
+	uint8_t tel_key_2 = CREATE_TELEMETRY_KEY(TEL_MAGNETIC_FIELD, NODE_ADCS);
+	SET_MSG_DATA(msg_body, 0, uint8_t, tel_key_2);
+	SET_MSG_DATA(msg_body, 1, uint8_t, count);
+	SET_MSG_DATA(msg_body, 2, uint8_t, 2); // packet #
+	SET_MSG_DATA(msg_body, 3, float, magTesla[2]);
+
+	// send the message.
+	CANWrapper_Transmit(&hcan1, NODE_CDH, CMD_CDH_PROCESS_TELEMETRY_REPORT, msg_body);
+	osDelay(1000);
+  }
+  /* USER CODE END 5 */
+}
 
 /**
   * @brief  This function is executed in case of error occurrence.
