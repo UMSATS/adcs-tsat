@@ -31,11 +31,6 @@
 	</natures>
 	<linkedResources>
 		<link>
-			<name>tsat-utilites-kit</name>
-			<type>2</type>
-			<locationURI>$%7BPARENT-2-PROJECT_LOC%7D/tsat-utilites-kit</locationURI>
-		</link>
-		<link>
 			<name>tsat-utilities-kit</name>
 			<type>2</type>
 			<locationURI>$%7BPARENT-2-PROJECT_LOC%7D/tsat-utilities-kit</locationURI>
