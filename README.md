@@ -9,7 +9,7 @@ Our website can be found here: http://www.umsats.ca/
 ## Setup
 To set up the project you must also have the tsat-utilities-kit repository cloned and positioned in the correct directory locations so that the project linker can find the library.
 
-Use the git command `git clone <repository_url>` to clone the ADCS and TUK repos in the desired workspace for UMSATS projects or use the github desktop app UI to achieve the same result.
+Use the git command `git clone <repository_url>` to clone the ADCS and [TUK](https://github.com/UMSATS/tsat-utilities-kit) repos in the desired workspace for UMSATS projects or use the github desktop app UI to achieve the same result.
 
 The following image gives you the correct project layout needed for the code to function and compile properly.
 
