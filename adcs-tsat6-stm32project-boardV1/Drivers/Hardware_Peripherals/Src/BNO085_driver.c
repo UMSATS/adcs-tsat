@@ -14,9 +14,10 @@
 //###############################################################################################
 #include <stdint.h>
 
+#include "tuk/tuk.h"
+
 #include "stm32l4xx_hal.h"
 #include "BNO085_driver.h"
-#include "can.h"
 
 //###############################################################################################
 //Define Directives
@@ -167,36 +168,29 @@ HAL_StatusTypeDef BNO085_Send_Rotation_Vector_Telemetry()
 {
     HAL_StatusTypeDef operation_status;
 
-    CANMessage_t message1;
-    message1.priority = 0x03; //Priority for functional testing - this should be changed later
-    message1.SenderID = SOURCE_ID; //ADCS
-    message1.DestinationID = 0x01; //CDH
-    message1.command = BNO085_ROTATION_VECTOR_TELEMETRY_COMMAND_CODE_1_OF_2;
+    uint8_t message1[7] = {0};
 
-    message1.data[0] = rotation_vector_telemetry_sequence;
-    message1.data[1] = rotation_vector.q_i >> 8;
-    message1.data[2] = rotation_vector.q_i;
-    message1.data[3] = rotation_vector.q_j >> 8;
-    message1.data[4] = rotation_vector.q_j;
-    message1.data[5] = rotation_vector.q_k >> 8;
-    message1.data[6] = rotation_vector.q_k;
+    message1[0] = rotation_vector_telemetry_sequence;
+    message1[1] = rotation_vector.q_i >> 8;
+    message1[2] = rotation_vector.q_i;
+    message1[3] = rotation_vector.q_j >> 8;
+    message1[4] = rotation_vector.q_j;
+    message1[5] = rotation_vector.q_k >> 8;
+    message1[6] = rotation_vector.q_k;
 
-    operation_status = CAN_Transmit_Message(message1);
+    operation_status=CANWrapper_Transmit(&hcan1, NODE_CDH, BNO085_ROTATION_VECTOR_TELEMETRY_COMMAND_CODE_1_OF_2, message1);
     if (operation_status != HAL_OK) goto error;
 
-    CANMessage_t message2;
-    message2.priority = 0x03; //Priority for functional testing - this should be changed later
-    message2.SenderID = SOURCE_ID; //ADCS
-    message2.DestinationID = 0x01; //CDH
-    message2.command = BNO085_ROTATION_VECTOR_TELEMETRY_COMMAND_CODE_2_OF_2;
 
-    message2.data[0] = rotation_vector_telemetry_sequence;
-    message2.data[1] = rotation_vector.q_real >> 8;
-    message2.data[2] = rotation_vector.q_real;
-    message2.data[3] = rotation_vector.accuracy >> 8;
-    message2.data[4] = rotation_vector.accuracy;
+    uint8_t message2[7] = {0};
 
-    operation_status = CAN_Transmit_Message(message2);
+    message2[0] = rotation_vector_telemetry_sequence;
+    message2[1] = rotation_vector.q_real >> 8;
+    message2[2] = rotation_vector.q_real;
+    message2[3] = rotation_vector.accuracy >> 8;
+    message2[4] = rotation_vector.accuracy;
+
+    operation_status=CANWrapper_Transmit(&hcan1, NODE_CDH, BNO085_ROTATION_VECTOR_TELEMETRY_COMMAND_CODE_2_OF_2, message2);
     if (operation_status != HAL_OK) goto error;
     rotation_vector_telemetry_sequence++;
 
