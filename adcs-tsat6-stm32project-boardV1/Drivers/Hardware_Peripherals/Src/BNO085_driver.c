@@ -22,8 +22,8 @@
 //###############################################################################################
 //Define Directives
 //###############################################################################################
-#define BNO085_ROTATION_VECTOR_TELEMETRY_COMMAND_CODE_1_OF_2    0x35
-#define BNO085_ROTATION_VECTOR_TELEMETRY_COMMAND_CODE_2_OF_2    0x36
+#define BNO085_ROTATION_VECTOR_TELEMETRY_COMMAND_CODE_1_OF_2    0x35 // TODO Find or add updated tuk command from can_command_list.h
+#define BNO085_ROTATION_VECTOR_TELEMETRY_COMMAND_CODE_2_OF_2    0x36 // TODO Find or add updated tuk command from can_command_list.h
 
 #define BNO085_NUMBER_OF_INIT_MESSAGES                          0x02
 
@@ -166,7 +166,7 @@ error:
 
 HAL_StatusTypeDef BNO085_Send_Rotation_Vector_Telemetry()
 {
-    HAL_StatusTypeDef operation_status;
+	ErrorCode operation_status;
 
     uint8_t message1[7] = {0};
 
