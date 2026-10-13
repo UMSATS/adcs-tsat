@@ -30,6 +30,7 @@ void On_CAN_Message_Ready(const CAN_HandleTypeDef *hcan, const CANMessage *msg)
 		break;
 	}
 
+	// TODO go through old command handling queue
 	//      MAX6822_WDI_Toggle();
 	//
 	//      if(!CAN_Queue_IsEmpty(&can_queue))
